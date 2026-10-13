@@ -41,7 +41,7 @@ for filename in os.listdir(TESTS_DIR):
                 test_id += 1
 
 # Import providers from separate modules
-from providers import daytona, e2b, codesandbox, modal, local
+from providers import daytona, e2b, codesandbox, modal, local, substrate
 
 # Map provider names to their corresponding execute() implementations.
 # Note: the daytona.execute() requires (code, executor, target_region).
@@ -50,7 +50,8 @@ provider_executors = {
     'e2b': e2b.execute,
     'codesandbox': codesandbox.execute,
     'modal': modal.execute,
-    'local': local.execute
+    'local': local.execute,
+    'substrate': substrate.execute
 }
 
 # Configure logging
@@ -150,7 +151,9 @@ class SandboxExecutor:
             },
             'e2b': {},
             'modal': {},
-            'local': {}
+            'local': {},
+            # Optional SUBSTRATE_* settings have defaults; see providers/README.md.
+            'substrate': {}
         }
 
         # Determine which required vars to check based on selected providers
@@ -990,7 +993,7 @@ if __name__ == "__main__":
     # Handle all-providers toggle
     if args.all_providers:
         # Toggle between all and none
-        all_providers = "daytona,e2b,codesandbox,modal,local"
+        all_providers = "daytona,e2b,codesandbox,modal,local,substrate"
         if args.providers == all_providers:
             args.providers = ""
         else:
