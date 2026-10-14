@@ -11,7 +11,7 @@ try:
 except ImportError:
     pass
 
-from daytona_sdk import Daytona, DaytonaConfig
+from daytona import Daytona, DaytonaConfig
 
 def main():
     load_dotenv()
@@ -46,15 +46,14 @@ def main():
     
     config = DaytonaConfig(
         api_key=api_key,
-        server_url=server_url,
+        api_url=server_url,
         target=target_region
     )
     daytona = Daytona(config=config)
     
     print("Fetching active sandboxes...")
     try:
-        paginated = daytona.list()
-        sandboxes = paginated.items if hasattr(paginated, 'items') else paginated
+        sandboxes = list(daytona.list())
     except Exception as e:
         print(f"Error fetching sandboxes: {e}")
         return

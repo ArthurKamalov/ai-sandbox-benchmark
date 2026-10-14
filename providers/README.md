@@ -86,8 +86,7 @@ It is opt-in: pass `--providers substrate` (or include it in your list).
    pip install 'ate-env-client @ git+https://github.com/agent-substrate/env@f76fe8bbdbd5230aaac0e048309f58a4f6561f29#subdirectory=clients/python'
    ```
 
-   It needs recent `grpcio` and `protobuf` releases, which may conflict with the version of
-   `modal` pinned here; if they do, use a separate virtual environment for Substrate runs.
+   It installs alongside `requirements.txt` in the same virtual environment.
 
 2. **Deploy env on a cluster that runs Substrate.** Install the CLI, then apply the namespace,
    worker pool and API service, following the

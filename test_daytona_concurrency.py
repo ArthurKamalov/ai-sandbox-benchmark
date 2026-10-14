@@ -24,7 +24,7 @@ import asyncio
 import statistics
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
-from daytona_sdk import Daytona, DaytonaConfig, CreateSandboxFromImageParams
+from daytona import Daytona, DaytonaConfig, CreateSandboxFromImageParams
 
 # Load environment variables
 load_dotenv()
@@ -67,7 +67,7 @@ def create_daytona_client():
 
     config = DaytonaConfig(
         api_key=DAYTONA_API_KEY,
-        server_url=DAYTONA_SERVER_URL,
+        api_url=DAYTONA_SERVER_URL,
         target=TARGET_REGION
     )
     return Daytona(config=config)
@@ -107,8 +107,7 @@ async def list_workspaces(client, executor):
     try:
         # List workspaces
         loop = asyncio.get_running_loop()
-        paginated = await loop.run_in_executor(executor, client.list)
-        workspaces = paginated.items if hasattr(paginated, 'items') else paginated
+        workspaces = await loop.run_in_executor(executor, lambda: list(client.list()))
         list_time = time.time() - start_time
         print(f"  Listed {len(workspaces)} workspaces in {list_time:.2f}s")
 
