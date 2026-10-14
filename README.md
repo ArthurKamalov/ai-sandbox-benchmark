@@ -8,7 +8,7 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/nkkko/ai-sandbox-benchmark/graphs/commit-activity)
 
-Welcome to **AI Sandbox Benchmark** – an open-source, standardized benchmarking framework designed to evaluate and compare various code execution sandbox environments like Daytona, e2b, CodeSandbox, Modal, and others.
+Welcome to **AI Sandbox Benchmark** – an open-source, standardized benchmarking framework designed to evaluate and compare various code execution sandbox environments like Daytona, e2b, CodeSandbox, Modal, Agent Substrate, and others.
 
 > **⚠️ Disclaimer:** This project is a work in progress and proof of concept. We are actively working on optimizing performance, improving test coverage, and enhancing the overall user experience. Feedback and contributions are highly welcome!
 
@@ -234,7 +234,7 @@ python benchmark.py --cli
   **Default:** `all`
 
 - `--providers` or `-p`: Comma-separated list of providers to test.
-  **Default:** `daytona,e2b,codesandbox,modal,local`
+  **Default:** `daytona,e2b,codesandbox,modal,local` (`substrate` is opt-in and needs a cluster; see the [Provider README](/providers/README.md))
 
 - `--runs` or `-r`: Number of measurement runs per test/provider.
   **Default:** `10`
@@ -344,6 +344,7 @@ ai-sandbox-benchmark
 │   ├── e2b.py
 │   ├── modal.py
 │   ├── local.py     # Local execution provider
+│   ├── substrate.py # Agent Substrate provider (opt-in)
 │   ├── utils.py     # Provider utilities
 │   ├── README.md    # Provider-specific documentation
 │   └── codesandbox-service.js

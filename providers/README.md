@@ -11,6 +11,7 @@ The benchmark currently supports the following execution environments:
 - **CodeSandbox** - Browser-based sandbox environment (codesandbox.py)
 - **Modal** - Serverless compute platform (modal.py)
 - **Local** - Local machine execution for baseline comparison (local.py)
+- **Substrate** - Agent Substrate environments on your own Kubernetes cluster via [agent-substrate/env](https://github.com/agent-substrate/env) (substrate.py; opt-in, not in the default provider list)
 
 ## Provider Setup Instructions
 
@@ -68,6 +69,85 @@ Modal uses CLI-based authentication instead of API keys:
 
 The local provider runs tests directly on your machine without any additional setup, making it useful for establishing baseline performance.
 
+### Agent Substrate
+
+The Substrate provider creates one environment per run through `ate-env-api` from
+[agent-substrate/env](https://github.com/agent-substrate/env) (alpha API), which runs each
+environment as an [Agent Substrate](https://github.com/agent-substrate/substrate) actor.
+It is opt-in: pass `--providers substrate` (or include it in your list).
+
+**Versions.** The provider pins env commit `f76fe8bbdbd5230aaac0e048309f58a4f6561f29`
+(`ENV_COMMIT` in `substrate.py`), which needs Substrate at or after
+[`f03327bd`](https://github.com/agent-substrate/substrate/commit/f03327bd) on the cluster.
+
+1. **Install the Python client.** It is not in `requirements.txt`:
+
+   ```bash
+   pip install 'ate-env-client @ git+https://github.com/agent-substrate/env@f76fe8bbdbd5230aaac0e048309f58a4f6561f29#subdirectory=clients/python'
+   ```
+
+   It installs alongside `requirements.txt` in the same virtual environment.
+
+2. **Deploy env on a cluster that runs Substrate.** Install the CLI, then apply the namespace,
+   worker pool and API service, following the
+   [env quickstart](https://github.com/agent-substrate/env/blob/f76fe8bbdbd5230aaac0e048309f58a4f6561f29/README.md#quickstart)
+   for the image digests:
+
+   ```bash
+   go install github.com/agent-substrate/env/cmd/ate-env@f76fe8bbdbd5230aaac0e048309f58a4f6561f29
+   ate-env manifest --api-image <ate-env-api image> --worker-image <ateom image> | kubectl apply -f -
+   kubectl get pods -n ate-env
+   ```
+
+3. **Register a Python template.** The tests need `python3`, so register a template from a stock
+   `python:3.12` image once the `ate-env-api` pod is running:
+
+   ```bash
+   ate-env manifest template --template py312 \
+     --rootfs-image docker.io/library/python@sha256:<digest> \
+     --guest-image <ate-env-guest image> \
+     --snapshots-bucket <object-storage-url> | kubectl-ate create actor-template -f -
+   ```
+
+   Prefer a registered template over `SUBSTRATE_ROOTFS_IMAGE`: the first environment created
+   from a new rootfs image builds a derived template and its golden snapshot, which would be
+   counted as Workspace Creation time.
+
+4. **Reach the API.** `ate-env-api` serves plaintext gRPC without authentication; port-forward it:
+
+   ```bash
+   kubectl port-forward -n ate-env svc/ate-env-api 7777:7777
+   ```
+
+5. **Configure `.env`.** All settings are optional:
+
+   ```
+   SUBSTRATE_ENV_API_ADDR=localhost:7777   # ate-env-api address
+   SUBSTRATE_TEMPLATE=py312                # '<name>' or '<atespace>/<name>'; default: the API's default template
+   SUBSTRATE_ATESPACE=ate-env              # atespace for new environments
+   SUBSTRATE_ROOTFS_IMAGE=                 # digest-pinned image, used instead of a template
+   SUBSTRATE_WORKDIR=/workspace            # where test code is written
+   ```
+
+**Metrics.** Workspace Creation covers creating the environment and waiting for its first
+command to succeed (creation does not wake the actor; the first guest call does). With
+`measure_lifecycle` tests, Suspend times `suspend()` and Resume times the wait until the first
+command after it succeeds, since env has no explicit resume call. Cleanup includes the snapshot
+`ate-env-api` takes before deleting an environment.
+
+**Dependencies.** Tests that import `numpy` or `scipy` install them with pip on every run, since
+the stock Python image lacks them. That needs egress from the actor and adds to Setup Time; bake
+them into a derived rootfs image to avoid it.
+
+**Cleanup.** Each environment is deleted after its run. If a run crashes or deletion fails, the
+error is logged with the environment ID (`bench-<hex>`); the env API cannot list environments,
+so find and remove leftovers with the Substrate CLI:
+
+```bash
+kubectl ate get actors -a ate-env
+ate-env delete <id>
+```
+
 ## Provider Configuration
 
 Provider-specific settings can be configured in the `config.yml` file in the project root:
@@ -84,6 +164,8 @@ providers:
   daytona:
     default_region: eu
 ```
+
+The Substrate provider reads its settings from `SUBSTRATE_*` environment variables rather than `config.yml`.
 
 ## Implementation Details
 

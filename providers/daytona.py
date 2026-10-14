@@ -17,7 +17,7 @@ import json
 import base64
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, List, Union, Tuple, Optional
-from daytona_sdk import Daytona, DaytonaConfig, CreateSandboxFromImageParams
+from daytona import Daytona, DaytonaConfig, CreateSandboxFromImageParams
 from metrics import BenchmarkTimingMetrics
 from providers.utils import extract_imports, check_and_install_dependencies
 
@@ -87,7 +87,7 @@ async def get_or_create_daytona_client(target_region: str) -> Daytona:
             # Set up Daytona config and client
             config = DaytonaConfig(
                 api_key=api_key,
-                server_url=server_url,
+                api_url=server_url,
                 target=target_region
             )
             _daytona_clients[target_region] = Daytona(config=config)
@@ -126,8 +126,8 @@ async def list_workspaces(target_region: str) -> List:
             
             # List workspaces using the persistent executor
             # This triggers the warm pool preparation on Daytona's side
-            paginated = await loop.run_in_executor(daytona_executor, daytona.list)
-            workspaces = paginated.items if hasattr(paginated, 'items') else paginated
+            # daytona.list() is a lazy generator, so consume it inside the executor
+            workspaces = await loop.run_in_executor(daytona_executor, lambda: list(daytona.list()))
             
             # Add a small delay to avoid API rate limiting
             await asyncio.sleep(API_WAIT_TIME)

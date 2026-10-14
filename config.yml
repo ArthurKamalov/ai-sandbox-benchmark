@@ -31,3 +31,5 @@ providers:
     # CodeSandbox specific configuration
   modal:
     # Modal specific configuration
+  substrate:
+    # Agent Substrate settings come from SUBSTRATE_* variables in .env

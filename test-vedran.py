@@ -9,13 +9,13 @@ try:
 except ImportError:
     pass
 
-from daytona_sdk import Daytona, CreateSandboxFromImageParams, DaytonaConfig
+from daytona import Daytona, CreateSandboxFromImageParams, DaytonaConfig
 from concurrent.futures import ThreadPoolExecutor
 import time
 
 config=DaytonaConfig(
     api_key=str(os.getenv("DAYTONA_API_KEY")),
-    server_url=str(os.getenv("DAYTONA_SERVER_URL")),
+    api_url=str(os.getenv("DAYTONA_SERVER_URL")),
     target="eu"
 )
 
