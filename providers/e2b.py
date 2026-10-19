@@ -127,6 +127,8 @@ print("Verification file written")
             resume_start = time.time()
             sandbox_id = sandbox.sandbox_id
             sandbox = Sandbox.connect(sandbox_id)
+            # Resumed once it runs a command, as with every provider.
+            sandbox.commands.run("true")
             metrics.add_metric("Resume", time.time() - resume_start)
             log_info("Workspace resumed")
 

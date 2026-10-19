@@ -289,6 +289,10 @@ print("Verification file written")
                 snapshot=snapshot,
                 client=sandbox._client
             )
+            # Resumed once it runs a command, as with every provider; the call
+            # above returns before the sandbox is up.
+            probe = await sandbox.exec.aio("true")
+            await probe.wait.aio()
             metrics.add_metric("Resume", time.time() - resume_start)
             log_info("Workspace resumed from snapshot")
             

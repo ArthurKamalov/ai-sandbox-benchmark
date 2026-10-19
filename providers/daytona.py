@@ -291,6 +291,8 @@ print("Verification file written")
             async with api_semaphore:
                 log_debug("Acquired API semaphore for workspace resume (start)")
                 await loop.run_in_executor(daytona_executor, daytona.start, workspace)
+                # Resumed once it runs a command, as with every provider.
+                await loop.run_in_executor(daytona_executor, workspace.process.exec, "true")
                 await asyncio.sleep(API_WAIT_TIME)
             metrics.add_metric("Resume", time.time() - resume_start)
             log_info("Workspace resumed")
