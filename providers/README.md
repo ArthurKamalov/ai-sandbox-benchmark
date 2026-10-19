@@ -13,6 +13,7 @@ The benchmark currently supports the following execution environments:
 - **Local** - Local machine execution for baseline comparison (local.py)
 - **Substrate** - Agent Substrate environments on your own Kubernetes cluster via [agent-substrate/env](https://github.com/agent-substrate/env) (substrate.py; opt-in, not in the default provider list)
 - **Anthropic** - Claude Managed Agents sessions, whose container runs commands only through the agent (anthropic_agents.py; opt-in, not in the default provider list)
+- **OpenAI** - Agents API sessions in OpenAI-hosted sandboxes, which run commands only through the agent (openai_agents.py; opt-in, not in the default provider list)
 
 ## Provider Setup Instructions
 
@@ -174,6 +175,33 @@ Sessions cannot be suspended or resumed, so `measure_lifecycle` tests run withou
 deletes the session, and its container with it.
 
 **Cost.** Every run is billed for its model turns and session runtime; the provider logs each
+session's usage before deleting it.
+
+### OpenAI (Agents API)
+
+Each run is an Agents API session in an OpenAI-hosted sandbox. The API has no call that runs a
+command in a session's sandbox, so the provider sends its agent one command per step to run
+verbatim through its shell; a run in which the agent runs anything else fails. It is opt-in:
+pass `--providers openai`.
+
+1. Get an API key from the [OpenAI Platform](https://platform.openai.com) and add it to `.env`:
+   ```
+   OPENAI_API_KEY=your_openai_api_key
+   OPENAI_AGENT_MODEL=gpt-6-astra   # optional, the agent's model
+   OPENAI_AGENT_EFFORT=low          # optional, the agent's reasoning effort
+   ```
+
+2. Each session gets its own sandbox, of the default medium size (2 vCPU, 4 GB), with the run's
+   files written under `/workspace/bench`. Nothing outlives the run.
+
+**Metrics.** Each step costs a model turn. Setup Time and Code Execution are the command's own
+duration, as the server reports it, so they leave the model out. Workspace Creation is
+wall-clock from creating the session until its sandbox's environment reports it provisioned,
+with no model turn. Sandboxes suspend on their own when idle but cannot be suspended or resumed
+on request, so `measure_lifecycle` tests run without it. Cleanup deletes the session, and its
+sandbox with it.
+
+**Cost.** Every run is billed for its model turns and sandbox runtime; the provider logs each
 session's usage before deleting it.
 
 ## Provider Configuration

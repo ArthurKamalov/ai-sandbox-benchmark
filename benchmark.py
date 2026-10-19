@@ -133,7 +133,7 @@ class BenchmarkTUI:
         self.region = config.get('providers', {}).get('daytona', {}).get('default_region', 'eu')
 
         # Available providers and tests
-        self.providers = ["daytona", "e2b", "codesandbox", "modal", "local", "substrate", "anthropic"]
+        self.providers = ["daytona", "e2b", "codesandbox", "modal", "local", "substrate", "anthropic", "openai"]
         self.selected_providers = ["daytona"]  # Select all by default
         self.selected_tests = [1]  # Start with just the first test selected
 

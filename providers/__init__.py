@@ -11,3 +11,4 @@ import providers.codesandbox
 import providers.local
 import providers.substrate
 import providers.anthropic_agents
+import providers.openai_agents
