@@ -12,6 +12,7 @@ The benchmark currently supports the following execution environments:
 - **Modal** - Serverless compute platform (modal.py)
 - **Local** - Local machine execution for baseline comparison (local.py)
 - **Substrate** - Agent Substrate environments on your own Kubernetes cluster via [agent-substrate/env](https://github.com/agent-substrate/env) (substrate.py; opt-in, not in the default provider list)
+- **Anthropic** - Claude Managed Agents sessions, whose container runs commands only through the agent (anthropic_agents.py; opt-in, not in the default provider list)
 
 ## Provider Setup Instructions
 
@@ -147,6 +148,33 @@ so find and remove leftovers with the Substrate CLI:
 kubectl ate get actors -a ate-env
 ate-env delete <id>
 ```
+
+### Anthropic (Claude Managed Agents)
+
+Each run is a Managed Agents session in Anthropic's cloud. The API has no call that runs a
+command in a session's container, so the provider gives its agent the bash tool (and read,
+which mounted files require) and sends it one command per step to run verbatim; a run in
+which the agent calls anything else fails. It is opt-in: pass `--providers anthropic`.
+
+1. Get an API key from the [Claude Console](https://platform.claude.com) and add it to `.env`:
+   ```
+   ANTHROPIC_API_KEY=your_anthropic_api_key
+   ANTHROPIC_AGENT_MODEL=claude-opus-5   # optional, the agent's model
+   ANTHROPIC_AGENT_EFFORT=low            # optional, the agent's effort
+   ```
+
+2. The first run creates an environment named `ai-sandbox-benchmark` and an agent named
+   `ai-sandbox-benchmark-runner-<hash of its configuration>`; later runs reuse them.
+
+**Metrics.** Each step costs a model turn. Setup Time and Code Execution are the time from
+the agent's bash call to its result, by the server's event timestamps, so they leave the
+model out. Workspace Creation is wall-clock from creating the session until its first command
+answers, one model turn included, as the container comes up only once the session needs it.
+Sessions cannot be suspended or resumed, so `measure_lifecycle` tests run without it. Cleanup
+deletes the session, and its container with it.
+
+**Cost.** Every run is billed for its model turns and session runtime; the provider logs each
+session's usage before deleting it.
 
 ## Provider Configuration
 

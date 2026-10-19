@@ -41,7 +41,7 @@ for filename in os.listdir(TESTS_DIR):
                 test_id += 1
 
 # Import providers from separate modules
-from providers import daytona, e2b, codesandbox, modal, local, substrate
+from providers import daytona, e2b, codesandbox, modal, local, substrate, anthropic_agents
 
 # Map provider names to their corresponding execute() implementations.
 # Note: the daytona.execute() requires (code, executor, target_region).
@@ -51,7 +51,8 @@ provider_executors = {
     'codesandbox': codesandbox.execute,
     'modal': modal.execute,
     'local': local.execute,
-    'substrate': substrate.execute
+    'substrate': substrate.execute,
+    'anthropic': anthropic_agents.execute
 }
 
 # Configure logging
@@ -153,7 +154,10 @@ class SandboxExecutor:
             'modal': {},
             'local': {},
             # Optional SUBSTRATE_* settings have defaults; see providers/README.md.
-            'substrate': {}
+            'substrate': {},
+            'anthropic': {
+                "ANTHROPIC_API_KEY": "Anthropic API key"
+            }
         }
 
         # Determine which required vars to check based on selected providers
@@ -993,7 +997,7 @@ if __name__ == "__main__":
     # Handle all-providers toggle
     if args.all_providers:
         # Toggle between all and none
-        all_providers = "daytona,e2b,codesandbox,modal,local,substrate"
+        all_providers = "daytona,e2b,codesandbox,modal,local,substrate,anthropic"
         if args.providers == all_providers:
             args.providers = ""
         else:
