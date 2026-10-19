@@ -19,7 +19,7 @@ def log_warning(message):
     logger.warning(f"[Modal] {message}")
 
 # Define the image with necessary packages at global scope
-image = modal.Image.debian_slim().apt_install(
+image = modal.Image.debian_slim(python_version="3.13").apt_install(
     "git",
     "python3-venv"
 ).pip_install(
@@ -34,6 +34,11 @@ image = modal.Image.debian_slim().apt_install(
     "metrics", 
     "tests"
 )
+
+# The same size as E2B's default sandbox and Daytona's, 2 vCPU and 2 GiB, request and limit
+# alike; by default a sandbox may use more. cpu=2.0 measures 2 vCPU of throughput, 1.0 less.
+SANDBOX_CPUS = 2.0
+SANDBOX_MEMORY_MIB = 2048
 
 # No need for a separate init function - we'll define the dependencies directly in the sandbox
 
@@ -84,6 +89,8 @@ async def execute(code: str, env_vars: Dict[str, str] = None):
             app=app,
             image=image,
             secrets=secrets,  # This will be an empty list if no env vars
+            cpu=(SANDBOX_CPUS, SANDBOX_CPUS),
+            memory=(SANDBOX_MEMORY_MIB, SANDBOX_MEMORY_MIB),
             _experimental_enable_snapshot=test_config.get('measure_lifecycle', False)
         )
         # Track only the actual sandbox creation time
