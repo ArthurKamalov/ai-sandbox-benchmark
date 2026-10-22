@@ -232,9 +232,15 @@ async def execute(code: Any, env_vars: Optional[Dict[str, str]] = None) -> Tuple
 
         log_info("Creating session...")
         start = time.time()
+        environment = {"type": "openai_hosted", "network": {"access": "enabled"}, "files": files}
+        # small, medium or large; unset, OpenAI's default, medium. See
+        # https://developers.openai.com/api/docs/guides/agents-api/environments/openai-hosted
+        container_size = os.getenv("OPENAI_CONTAINER_SIZE", "").strip()
+        if container_size:
+            environment["container_size"] = container_size
         session = await client.beta.agents.sessions.create(
             agent=_agent_config(),
-            environment={"type": "openai_hosted", "network": {"access": "enabled"}, "files": files},
+            environment=environment,
             metadata={"title": "ai-sandbox-benchmark"},
         )
         session_id = session.id

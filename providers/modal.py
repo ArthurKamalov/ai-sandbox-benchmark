@@ -1,5 +1,6 @@
 # providers/modal.py
 
+import os
 import time
 import logging
 from typing import Dict
@@ -35,10 +36,11 @@ image = modal.Image.debian_slim(python_version="3.13").apt_install(
     "tests"
 )
 
-# The same size as E2B's default sandbox and Daytona's, 2 vCPU and 2 GiB, request and limit
-# alike; by default a sandbox may use more. cpu=2.0 measures 2 vCPU of throughput, 1.0 less.
-SANDBOX_CPUS = 2.0
-SANDBOX_MEMORY_MIB = 2048
+# The sandbox's vCPUs and memory in MiB from SANDBOX_CPU and SANDBOX_MEMORY_MIB, request and
+# limit alike; unset, Modal's defaults, which let a sandbox use more. cpu=2.0 measures 2 vCPU
+# of throughput, 1.0 less.
+SANDBOX_CPU = float(os.getenv("SANDBOX_CPU") or 0) or None
+SANDBOX_MEMORY_MIB = int(os.getenv("SANDBOX_MEMORY_MIB") or 0) or None
 
 # No need for a separate init function - we'll define the dependencies directly in the sandbox
 
@@ -89,8 +91,8 @@ async def execute(code: str, env_vars: Dict[str, str] = None):
             app=app,
             image=image,
             secrets=secrets,  # This will be an empty list if no env vars
-            cpu=(SANDBOX_CPUS, SANDBOX_CPUS),
-            memory=(SANDBOX_MEMORY_MIB, SANDBOX_MEMORY_MIB),
+            cpu=(SANDBOX_CPU, SANDBOX_CPU) if SANDBOX_CPU else None,
+            memory=(SANDBOX_MEMORY_MIB, SANDBOX_MEMORY_MIB) if SANDBOX_MEMORY_MIB else None,
             _experimental_enable_snapshot=test_config.get('measure_lifecycle', False)
         )
         # Track only the actual sandbox creation time

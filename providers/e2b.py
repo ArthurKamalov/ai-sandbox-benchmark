@@ -1,7 +1,8 @@
 # providers/e2b.py
 
-import time, asyncio, logging, os
-from typing import Dict, Any, List
+import time, asyncio, logging, os, threading
+from typing import Dict, Any, List, Optional
+from e2b import Template
 from e2b_code_interpreter import Sandbox
 from metrics import BenchmarkTimingMetrics
 from providers.utils import extract_imports, check_and_install_dependencies
@@ -18,11 +19,37 @@ def log_error(message):
 def log_warning(message):
     logger.warning(f"[E2B] {message}")
 
+# The sandbox's whole vCPUs and memory in MiB from SANDBOX_CPU and SANDBOX_MEMORY_MIB, which E2B
+# sizes by template: the code interpreter's, built once per E2B team in a template of that size.
+# Unset, the code interpreter's own.
+SANDBOX_CPU = int(float(os.getenv("SANDBOX_CPU") or 0)) or None
+SANDBOX_MEMORY_MIB = int(os.getenv("SANDBOX_MEMORY_MIB") or 0) or None
+BASE_TEMPLATE = "code-interpreter-v1"
+_template: Optional[str] = None
+_template_lock = threading.Lock()
+
+def sized_template() -> Optional[str]:
+    """The template of SANDBOX_CPU and SANDBOX_MEMORY_MIB, built if the team has none yet."""
+    global _template
+    if not SANDBOX_CPU and not SANDBOX_MEMORY_MIB:
+        return None
+    with _template_lock:
+        if _template is None:
+            name = f"ai-sandbox-benchmark-{SANDBOX_CPU or 'default'}cpu-{SANDBOX_MEMORY_MIB or 'default'}mib"
+            if not Template.exists(name):
+                log_info(f"Building template {name} from {BASE_TEMPLATE}")
+                Template.build(
+                    Template().from_template(BASE_TEMPLATE), name, cpu_count=SANDBOX_CPU, memory_mb=SANDBOX_MEMORY_MIB
+                )
+            _template = name
+    return _template
+
 async def execute(code: str, env_vars: Dict[str, str] = None):
     metrics = BenchmarkTimingMetrics()
     try:
+        template = sized_template()
         start = time.time()
-        sandbox = Sandbox.create()
+        sandbox = Sandbox.create(template=template)
         metrics.add_metric("Workspace Creation", time.time() - start)
 
         # Extract test configuration if available

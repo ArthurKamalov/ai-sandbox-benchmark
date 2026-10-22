@@ -53,9 +53,10 @@ _daytona_executor = ThreadPoolExecutor(max_workers=1)
 # Wait time between API calls to avoid rate limiting issues
 API_WAIT_TIME = 0.2  # seconds
 
-# The same size as E2B's default sandbox and Modal's, 2 vCPU and 2 GiB; Daytona's default is 1 and 1.
-SANDBOX_CPUS = 2
-SANDBOX_MEMORY_GIB = 2
+# The sandbox's whole vCPUs and memory from SANDBOX_CPU and SANDBOX_MEMORY_MIB, a whole number
+# of GiB; unset, Daytona's defaults, 1 and 1.
+SANDBOX_CPU = int(float(os.getenv("SANDBOX_CPU") or 0)) or None
+SANDBOX_MEMORY_GIB = int(os.getenv("SANDBOX_MEMORY_MIB") or 0) // 1024 or None
 
 async def get_or_create_daytona_client(target_region: str) -> Daytona:
     """Get a cached Daytona client for a specific region or create a new one if needed."""
@@ -206,7 +207,7 @@ async def execute(
         params = CreateSandboxFromImageParams(
             image=image,
             language="python",
-            resources=Resources(cpu=SANDBOX_CPUS, memory=SANDBOX_MEMORY_GIB)
+            resources=Resources(cpu=SANDBOX_CPU, memory=SANDBOX_MEMORY_GIB)
         )
         
         # Use semaphore to ensure we respect API rate limits
