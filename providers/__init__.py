@@ -9,3 +9,6 @@ import providers.e2b
 import providers.modal
 import providers.codesandbox
 import providers.local
+import providers.substrate
+import providers.anthropic_agents
+import providers.openai_agents

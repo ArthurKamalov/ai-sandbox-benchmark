@@ -17,7 +17,7 @@ import json
 import base64
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, List, Union, Tuple, Optional
-from daytona_sdk import Daytona, DaytonaConfig, CreateSandboxFromImageParams
+from daytona import Daytona, DaytonaConfig, CreateSandboxFromImageParams, Resources
 from metrics import BenchmarkTimingMetrics
 from providers.utils import extract_imports, check_and_install_dependencies
 
@@ -53,6 +53,11 @@ _daytona_executor = ThreadPoolExecutor(max_workers=1)
 # Wait time between API calls to avoid rate limiting issues
 API_WAIT_TIME = 0.2  # seconds
 
+# The sandbox's whole vCPUs and memory from SANDBOX_CPU and SANDBOX_MEMORY_MIB, a whole number
+# of GiB; unset, Daytona's defaults, 1 and 1.
+SANDBOX_CPU = int(float(os.getenv("SANDBOX_CPU") or 0)) or None
+SANDBOX_MEMORY_GIB = int(os.getenv("SANDBOX_MEMORY_MIB") or 0) // 1024 or None
+
 async def get_or_create_daytona_client(target_region: str) -> Daytona:
     """Get a cached Daytona client for a specific region or create a new one if needed."""
     global _daytona_clients
@@ -87,7 +92,7 @@ async def get_or_create_daytona_client(target_region: str) -> Daytona:
             # Set up Daytona config and client
             config = DaytonaConfig(
                 api_key=api_key,
-                server_url=server_url,
+                api_url=server_url,
                 target=target_region
             )
             _daytona_clients[target_region] = Daytona(config=config)
@@ -126,8 +131,8 @@ async def list_workspaces(target_region: str) -> List:
             
             # List workspaces using the persistent executor
             # This triggers the warm pool preparation on Daytona's side
-            paginated = await loop.run_in_executor(daytona_executor, daytona.list)
-            workspaces = paginated.items if hasattr(paginated, 'items') else paginated
+            # daytona.list() is a lazy generator, so consume it inside the executor
+            workspaces = await loop.run_in_executor(daytona_executor, lambda: list(daytona.list()))
             
             # Add a small delay to avoid API rate limiting
             await asyncio.sleep(API_WAIT_TIME)
@@ -201,7 +206,8 @@ async def execute(
         # Configure workspace parameters with improved defaults
         params = CreateSandboxFromImageParams(
             image=image,
-            language="python"
+            language="python",
+            resources=Resources(cpu=SANDBOX_CPU, memory=SANDBOX_MEMORY_GIB)
         )
         
         # Use semaphore to ensure we respect API rate limits
@@ -286,6 +292,8 @@ print("Verification file written")
             async with api_semaphore:
                 log_debug("Acquired API semaphore for workspace resume (start)")
                 await loop.run_in_executor(daytona_executor, daytona.start, workspace)
+                # Resumed once it runs a command, as with every provider.
+                await loop.run_in_executor(daytona_executor, workspace.process.exec, "true")
                 await asyncio.sleep(API_WAIT_TIME)
             metrics.add_metric("Resume", time.time() - resume_start)
             log_info("Workspace resumed")
